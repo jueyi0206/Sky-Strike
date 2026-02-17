@@ -137,15 +137,15 @@ const App: React.FC = () => {
         )}
 
         {gameState === 'GAME_WIN' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-600/90 z-20 p-8 text-center animate-fadeIn">
-             <div className="bg-white/10 p-10 border-4 border-yellow-500 backdrop-blur-md">
-                <h1 className="retro-font text-4xl mb-6 text-yellow-500 animate-bounce">完全勝利</h1>
-                <p className="text-white mb-8 uppercase tracking-[0.4em] font-bold">世界和平已恢復</p>
-                <div className="mb-12">
-                  <p className="text-xs text-blue-200 mb-1">最終得分</p>
-                  <p className="text-6xl font-black text-white drop-shadow-lg">{score.toLocaleString()}</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-900/90 z-20 p-8 text-center animate-fadeIn">
+             <div className="bg-black/40 p-10 border-4 border-yellow-500 backdrop-blur-md shadow-2xl rounded-lg w-full max-w-sm">
+                <h1 className="retro-font text-4xl mb-6 text-yellow-400 drop-shadow-[0_4px_0_rgba(0,0,0,0.5)] animate-bounce">完全勝利</h1>
+                <p className="text-white mb-8 uppercase tracking-[0.2em] font-bold text-sm text-blue-100">和平重歸天際</p>
+                <div className="mb-10 bg-black/30 p-4 rounded border border-white/10">
+                  <p className="text-xs text-blue-300 mb-2 uppercase tracking-widest">最終得分</p>
+                  <p className="text-5xl font-black text-white retro-font tracking-tight">{score.toLocaleString()}</p>
                 </div>
-                <button onClick={resetGame} className="px-10 py-5 bg-yellow-500 text-blue-950 font-bold hover:bg-yellow-400 transition-colors uppercase tracking-widest retro-font text-xs">返回基地</button>
+                <button onClick={resetGame} className="w-full py-4 bg-yellow-500 text-blue-950 font-bold hover:bg-yellow-400 transition-all uppercase tracking-widest retro-font text-xs transform hover:scale-[1.02] shadow-lg border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1">返回基地</button>
             </div>
           </div>
         )}

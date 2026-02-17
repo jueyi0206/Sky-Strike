@@ -102,15 +102,15 @@ const App = () => {
         h('button', { onClick: () => startMission(currentLevel + 1), className: 'px-8 py-4 bg-yellow-500 text-black font-bold hover:bg-yellow-400 transition-colors uppercase tracking-widest retro-font text-xs' }, '下一個任務')
       ),
 
-      gameState === 'GAME_WIN' && h('div', { className: 'absolute inset-0 flex flex-col items-center justify-center bg-black z-20 p-8 text-center animate-fadeIn' },
-        h('div', { className: 'p-10 border-y-4 border-red-600 bg-black/50 w-full' },
-            h('h1', { className: 'retro-font text-3xl mb-6 text-white tracking-widest animate-pulse' }, 'TO BE CONTINUED'),
-            h('p', { className: 'text-neutral-400 mb-8 uppercase tracking-[0.2em] font-bold text-xs' }, '戰鬥仍將繼續...'),
-            h('div', { className: 'mb-12' },
-              h('p', { className: 'text-xs text-neutral-600 mb-1' }, '最終得分'),
-              h('p', { className: 'text-5xl font-black text-white' }, score.toLocaleString())
+      gameState === 'GAME_WIN' && h('div', { className: 'absolute inset-0 flex flex-col items-center justify-center bg-blue-900/90 z-20 p-8 text-center animate-fadeIn' },
+        h('div', { className: 'bg-black/40 p-10 border-4 border-yellow-500 backdrop-blur-md shadow-2xl rounded-lg w-full max-w-sm' },
+            h('h1', { className: 'retro-font text-4xl mb-6 text-yellow-400 drop-shadow-[0_4px_0_rgba(0,0,0,0.5)] animate-bounce' }, '完全勝利'),
+            h('p', { className: 'text-white mb-8 uppercase tracking-[0.2em] font-bold text-sm text-blue-100' }, '和平重歸天際'),
+            h('div', { className: 'mb-10 bg-black/30 p-4 rounded border border-white/10' },
+              h('p', { className: 'text-xs text-blue-300 mb-2 uppercase tracking-widest' }, '最終得分'),
+              h('p', { className: 'text-5xl font-black text-white retro-font tracking-tight' }, score.toLocaleString())
             ),
-            h('button', { onClick: resetGame, className: 'px-10 py-4 border border-white/20 hover:bg-white/10 text-white font-bold transition-colors uppercase tracking-widest retro-font text-[10px]' }, '返回標題')
+            h('button', { onClick: resetGame, className: 'w-full py-4 bg-yellow-500 text-blue-950 font-bold hover:bg-yellow-400 transition-all uppercase tracking-widest retro-font text-xs transform hover:scale-[1.02] shadow-lg border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1' }, '返回基地')
         )
       ),
 
