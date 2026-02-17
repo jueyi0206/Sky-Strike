@@ -7,16 +7,17 @@ const h = React.createElement;
 // --- 1. 常數定義 (Constants) ---
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 800;
+// 降低整體速度
 const PLAYER_SPEED = 3.2; 
 const PLAYER_WIDTH = 44;
 const PLAYER_HEIGHT = 44;
 const PLAYER_START_HEALTH = 250;
 
 const ENEMY_TYPES = {
-  SCOUT: { width: 32, height: 32, speed: 1.3, health: 1, fireRate: 140 },
+  SCOUT: { width: 32, height: 32, speed: 1.2, health: 1, fireRate: 140 },
   BOMBER: { width: 64, height: 48, speed: 0.5, health: 12, fireRate: 210 },
-  ACE: { width: 40, height: 40, speed: 1.8, health: 5, fireRate: 100 },
-  BOSS: { width: 180, height: 120, speed: 0.35, health: 150, fireRate: 70 }
+  ACE: { width: 40, height: 40, speed: 1.7, health: 5, fireRate: 100 },
+  BOSS: { width: 180, height: 120, speed: 0.3, health: 160, fireRate: 70 }
 };
 
 const COLORS = {
@@ -34,7 +35,7 @@ const COLORS = {
 
 const LEVEL_THRESHOLDS = [1500, 4500, 9500];
 
-// --- 2. 音效服務 (Audio Service) ---
+// --- 2. 音效服務 ---
 class AudioService {
   constructor() {
     this.ctx = null;
@@ -54,7 +55,7 @@ class AudioService {
     osc.type = 'square';
     osc.frequency.setValueAtTime(450, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.02, this.ctx.currentTime);
     osc.connect(gain); gain.connect(this.ctx.destination);
     osc.start(); osc.stop(this.ctx.currentTime + 0.08);
   }
@@ -71,7 +72,7 @@ class AudioService {
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(isBoss ? 600 : 300, this.ctx.currentTime);
     const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(isBoss ? 0.4 : 0.2, this.ctx.currentTime);
+    gain.gain.setValueAtTime(isBoss ? 0.3 : 0.15, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + (isBoss ? 1.2 : 0.25));
     noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
     noise.start();
@@ -88,38 +89,11 @@ class AudioService {
     osc.connect(gain); gain.connect(this.ctx.destination);
     osc.start(); osc.stop(this.ctx.currentTime + 0.2);
   }
-  playStageClear() {
-    this.init();
-    if (!this.ctx) return;
-    [523, 659, 783, 1046].forEach((f, i) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(f, this.ctx.currentTime + i * 0.12);
-      gain.gain.setValueAtTime(0.06, this.ctx.currentTime + i * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.12 + 0.3);
-      osc.connect(gain); gain.connect(this.ctx.destination);
-      osc.start(this.ctx.currentTime + i * 0.12); osc.stop(this.ctx.currentTime + i * 0.12 + 0.3);
-    });
-  }
-  playVictory() {
-    this.init();
-    if (!this.ctx) return;
-    const melody = [523, 523, 523, 523, 415, 466, 523, 466, 523];
-    melody.forEach((f, i) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.frequency.value = f;
-      gain.gain.setValueAtTime(0.06, this.ctx.currentTime + i * 0.2);
-      osc.connect(gain); gain.connect(this.ctx.destination);
-      osc.start(this.ctx.currentTime + i * 0.2); osc.stop(this.ctx.currentTime + i * 0.2 + 0.4);
-    });
-  }
   startBGM() {
     this.init();
     if (!this.ctx) return;
     this.bgmGain = this.ctx.createGain();
-    this.bgmGain.gain.value = 0.03;
+    this.bgmGain.gain.value = 0.02;
     this.bgmGain.connect(this.ctx.destination);
     const interval = setInterval(() => {
       if (!this.ctx || !this.bgmGain) return;
@@ -150,7 +124,7 @@ async function getMissionBriefing(level) {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Generate a dramatic short mission briefing for Level ${level} of a 1945 style airplane shooter. Level 1: Sea. Level 2: Mountain. Level 3: City. Use Traditional Chinese for content.`,
+      contents: `Generate a dramatic short mission briefing for Level ${level} of a 1945 style airplane shooter. Level 1: Sea. Level 2: Mountain. Level 3: City. Use Traditional Chinese.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -165,9 +139,7 @@ async function getMissionBriefing(level) {
       }
     });
     return JSON.parse(response.text);
-  } catch (error) {
-    return defaults[level - 1] || defaults[0];
-  }
+  } catch (error) { return defaults[level - 1] || defaults[0]; }
 }
 
 // --- 4. 遊戲畫布組件 ---
@@ -210,7 +182,7 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
       x: Math.random() * CANVAS_WIDTH,
       y: Math.random() * CANVAS_HEIGHT,
       size: Math.random() * 80 + 80,
-      speed: Math.random() * 0.6 + 0.4,
+      speed: Math.random() * 0.5 + 0.4,
       opacity: Math.random() * 0.1 + 0.05
     }));
   }, []);
@@ -316,12 +288,12 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     player.x = Math.max(0, Math.min(CANVAS_WIDTH - player.width, player.x));
     player.y = Math.max(0, Math.min(CANVAS_HEIGHT - player.height, player.y));
 
-    // --- 武器 5 階彈幕邏輯 ---
+    // --- 武器 5 階進化邏輯 ---
     if (player.fireCooldown <= 0) {
       audio.playShoot();
       const cx = player.x + player.width/2;
-      const bSpeed = 8;
-      let cooldown = 16; 
+      const bSpeed = 7.5;
+      let cooldown = 17; 
       
       const addBullet = (offX, offY, vx, vy, dmg = 1, color = COLORS.PLAYER_BULLET) => {
         bulletsRef.current.push({ x: cx + offX - 2, y: player.y + offY, width: 4, height: 14, damage: dmg, isPlayerBullet: true, vx, vy, color });
@@ -334,25 +306,25 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
         addBullet(10, 10, 0, -bSpeed);
       } else if (player.weaponLevel === 3) {
         addBullet(0, 0, 0, -bSpeed);
-        addBullet(-15, 12, -1.5, -bSpeed);
-        addBullet(15, 12, 1.5, -bSpeed);
-        cooldown = 14;
+        addBullet(-16, 12, -1.6, -bSpeed);
+        addBullet(16, 12, 1.6, -bSpeed);
+        cooldown = 15;
       } else if (player.weaponLevel === 4) {
-        addBullet(-5, 0, 0, -bSpeed, 1.5);
-        addBullet(5, 0, 0, -bSpeed, 1.5);
-        addBullet(-25, 15, -2.5, -bSpeed * 0.9, 1, '#22d3ee');
-        addBullet(25, 15, 2.5, -bSpeed * 0.9, 1, '#22d3ee');
-        cooldown = 12;
+        addBullet(-6, 0, 0, -bSpeed, 1.5);
+        addBullet(6, 0, 0, -bSpeed, 1.5);
+        addBullet(-28, 15, -2.8, -bSpeed * 0.9, 1, '#22d3ee');
+        addBullet(28, 15, 2.8, -bSpeed * 0.9, 1, '#22d3ee');
+        cooldown = 13;
       } else if (player.weaponLevel >= 5) {
-        // 滿級彈幕
-        addBullet(0, -5, 0, -bSpeed * 1.2, 2, '#fbbf24');
-        addBullet(-12, 5, -0.5, -bSpeed);
-        addBullet(12, 5, 0.5, -bSpeed);
-        addBullet(-28, 15, -2.5, -bSpeed * 0.9, 1, '#22d3ee');
-        addBullet(28, 15, 2.5, -bSpeed * 0.9, 1, '#22d3ee');
-        addBullet(-45, 25, -4.5, -bSpeed * 0.8, 1, '#6366f1');
-        addBullet(45, 25, 4.5, -bSpeed * 0.8, 1, '#6366f1');
-        cooldown = 8; 
+        // 滿級：覆蓋螢幕的彈幕 + 提速
+        addBullet(0, -6, 0, -bSpeed * 1.2, 2.2, '#fbbf24');
+        addBullet(-14, 6, -0.6, -bSpeed);
+        addBullet(14, 6, 0.6, -bSpeed);
+        addBullet(-30, 15, -3, -bSpeed * 0.9, 1, '#22d3ee');
+        addBullet(30, 15, 3, -bSpeed * 0.9, 1, '#22d3ee');
+        addBullet(-48, 28, -5, -bSpeed * 0.8, 1, '#6366f1');
+        addBullet(48, 28, 5, -bSpeed * 0.8, 1, '#6366f1');
+        cooldown = 9; 
       }
       player.fireCooldown = cooldown;
     }
@@ -364,7 +336,7 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
       const cfg = ENEMY_TYPES[type];
       enemiesRef.current.push({
         x: Math.random() * (CANVAS_WIDTH - cfg.width), y: -cfg.height, 
-        width: cfg.width, height: cfg.height, speed: cfg.speed + level * 0.12, 
+        width: cfg.width, height: cfg.height, speed: cfg.speed + level * 0.1, 
         health: cfg.health, maxHealth: cfg.health, type, fireCooldown: Math.random() * cfg.fireRate
       });
     }
@@ -375,7 +347,7 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
       enemiesRef.current.push({
         x: CANVAS_WIDTH / 2 - bCfg.width / 2, y: -bCfg.height, 
         width: bCfg.width, height: bCfg.height, speed: bCfg.speed, 
-        health: bCfg.health + (level - 1) * 70, maxHealth: bCfg.health + (level - 1) * 70, 
+        health: bCfg.health + (level - 1) * 80, maxHealth: bCfg.health + (level - 1) * 80, 
         type: 'BOSS', fireCooldown: 60
       });
     }
@@ -387,20 +359,20 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
             const bcx = e.x + e.width/2; const bcy = e.y + e.height;
             for(let i=0; i<10; i++) {
                 const angle = (i/10) * Math.PI * 2 + (frameCountRef.current * 0.03);
-                bulletsRef.current.push({ x: bcx, y: bcy, width: 8, height: 8, isPlayerBullet: false, vx: Math.cos(angle)*2.2, vy: Math.sin(angle)*2.2, color: COLORS.ENEMY_BULLET });
+                bulletsRef.current.push({ x: bcx, y: bcy, width: 8, height: 8, isPlayerBullet: false, vx: Math.cos(angle)*2, vy: Math.sin(angle)*2, color: COLORS.ENEMY_BULLET });
             }
             e.fireCooldown = ENEMY_TYPES.BOSS.fireRate;
         }
       } else {
         e.y += e.speed;
         if (e.fireCooldown <= 0) {
-           bulletsRef.current.push({ x: e.x + e.width/2, y: e.y + e.height, width: 5, height: 10, isPlayerBullet: false, vx: 0, vy: 3.5, color: COLORS.ENEMY_BULLET });
+           bulletsRef.current.push({ x: e.x + e.width/2, y: e.y + e.height, width: 5, height: 10, isPlayerBullet: false, vx: 0, vy: 3.2, color: COLORS.ENEMY_BULLET });
            e.fireCooldown = ENEMY_TYPES[e.type].fireRate;
         }
       }
       e.fireCooldown--;
-      if (Math.abs(e.x + e.width/2 - (player.x + player.width/2)) < (e.width + player.width)/2.8 && 
-          Math.abs(e.y + e.height/2 - (player.y + player.height/2)) < (e.height + player.height)/2.8) {
+      if (Math.abs(e.x + e.width/2 - (player.x + player.width/2)) < (e.width + player.width)/3 && 
+          Math.abs(e.y + e.height/2 - (player.y + player.height/2)) < (e.height + player.height)/3) {
         player.health -= 25; createExplosion(e.x + e.width/2, e.y + e.height/2); return false;
       }
       return e.y < CANVAS_HEIGHT + 100;
@@ -417,8 +389,8 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
               player.score += e.type === 'BOSS' ? 2500 : 100;
               createExplosion(e.x + e.width/2, e.y + e.height/2, e.type === 'BOSS');
               if (e.type === 'BOSS') { bossActiveRef.current = false; onLevelClear(player.score, player.weaponLevel); }
-              else if (Math.random() < 0.14) {
-                powerUpsRef.current.push({ x: e.x, y: e.y, width: 20, height: 20, type: Math.random() < 0.75 ? 'WEAPON' : 'HEALTH' });
+              else if (Math.random() < 0.15) {
+                powerUpsRef.current.push({ x: e.x, y: e.y, width: 22, height: 22, type: Math.random() < 0.7 ? 'WEAPON' : 'HEALTH' });
               }
             }
           }
@@ -433,11 +405,11 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     enemiesRef.current = enemiesRef.current.filter(e => e.health > 0);
 
     powerUpsRef.current = powerUpsRef.current.filter(p => {
-      p.y += 1.6;
+      p.y += 1.5;
       if (Math.abs(p.x - player.x) < 40 && Math.abs(p.y - player.y) < 40) {
         audio.playPowerup();
         if (p.type === 'WEAPON') player.weaponLevel = Math.min(5, player.weaponLevel + 1);
-        else player.health = Math.min(player.maxHealth, player.health + 45);
+        else player.health = Math.min(player.maxHealth, player.health + 50);
         return false;
       }
       return p.y < CANVAS_HEIGHT;
@@ -463,15 +435,17 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     });
     powerUpsRef.current.forEach(p => {
         ctx.fillStyle = p.type === 'WEAPON' ? '#fbbf24' : '#10b981';
-        ctx.beginPath(); ctx.arc(p.x + 10, p.y + 10, 10, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(p.type[0], p.x+10, p.y+14);
+        ctx.beginPath(); ctx.arc(p.x + 11, p.y + 11, 11, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(p.type[0], p.x+11, p.y+15);
     });
     enemiesRef.current.forEach(e => drawEnemyPlane(ctx, e));
     drawPlayerPlane(ctx, playerRef.current);
     particlesRef.current = particlesRef.current.filter(p => {
       p.x += p.vx; p.y += p.vy; p.life -= 0.025;
       if (p.life > 0) {
-        ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0, 3 * p.life), 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); 
+        // 關鍵修復：確保半徑不為負
+        ctx.arc(p.x, p.y, Math.max(0, 3.5 * p.life), 0, Math.PI*2); ctx.fill();
       }
       return p.life > 0;
     });
@@ -557,18 +531,11 @@ const App = () => {
   const handleLevelClear = (finalScore, finalWeaponLevel) => {
     setScore(finalScore);
     setWeaponLevel(finalWeaponLevel);
-    if (currentLevel < 3) {
-      audio.playStageClear();
-      setGameState('LEVEL_CLEAR');
-    } else {
-      audio.playVictory();
-      setGameState('GAME_WIN');
-    }
+    if (currentLevel < 3) setGameState('LEVEL_CLEAR');
+    else { audio.playVictory(); setGameState('GAME_WIN'); }
   };
 
-  const resetGame = () => {
-    setScore(0); setWeaponLevel(1); setCurrentLevel(1); setGameState('MENU');
-  };
+  const resetGame = () => { setScore(0); setWeaponLevel(1); setCurrentLevel(1); setGameState('MENU'); };
 
   return h('div', { className: 'min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-4 select-none' },
     h('div', { className: 'relative w-full max-w-[480px] aspect-[480/800] bg-black rounded-lg shadow-2xl overflow-hidden border-4 border-neutral-800' },
