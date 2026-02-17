@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sky Strike 1945</title>
+    <title>Sky Strike 1945 - Phoenix Rising</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
     <script>
+      // 模擬環境變數，API_KEY 會由系統自動注入
       window.process = { env: { API_KEY: "" } };
     </script>
     <style>
@@ -15,6 +16,7 @@
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
       canvas { image-rendering: pixelated; display: block; }
+      * { user-select: none; -webkit-tap-highlight-color: transparent; }
     </style>
     <script type="importmap">
 {
@@ -30,6 +32,7 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- 確保路徑為 ./index.js -->
     <script type="module" src="./index.js"></script>
   </body>
 </html>
