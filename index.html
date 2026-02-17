@@ -8,47 +8,30 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
     <script>
-      // Shim process.env for local browser environment safety
-      window.process = window.process || { env: { API_KEY: "" } };
+      window.process = { env: { API_KEY: "" } };
     </script>
     <style>
-      body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background-color: #000;
-        font-family: 'Space Grotesk', sans-serif;
-      }
-      .retro-font {
-        font-family: 'Press Start 2P', cursive;
-      }
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      .animate-fadeIn {
-        animation: fadeIn 0.5s ease-out forwards;
-      }
-      canvas {
-        image-rendering: pixelated;
-        display: block;
-      }
+      body { margin: 0; padding: 0; overflow: hidden; background-color: #000; font-family: 'Space Grotesk', sans-serif; }
+      .retro-font { font-family: 'Press Start 2P', cursive; }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
+      canvas { image-rendering: pixelated; display: block; }
     </style>
     <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@^19.2.4",
-        "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-        "react/": "https://esm.sh/react@^19.2.4/",
-        "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
-      }
-    }
-    </script>
-    <!-- Use esm.sh/run to handle .tsx transpilation and bypass MIME issues on GitHub Pages -->
-    <script type="module" src="https://esm.sh/run"></script>
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "@google/genai": "https://esm.sh/@google/genai@1.41.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+  }
+}
+</script>
   </head>
   <body>
     <div id="root"></div>
-    <!-- No direct <script src="./index.tsx"> needed as esm.sh/run handles entry points automatically -->
+    <!-- Direct JavaScript module entry -->
+    <script type="module" src="./index.js"></script>
   </body>
 </html>
