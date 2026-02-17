@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { 
   CANVAS_WIDTH, 
@@ -44,29 +43,22 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
   const keysPressed = useRef({});
 
   useEffect(() => {
-    starsRef.current = Array.from({ length: 50 }, () => ({
+    starsRef.current = Array.from({ length: 40 }, () => ({
       x: Math.random() * CANVAS_WIDTH,
       y: Math.random() * CANVAS_HEIGHT,
-      size: Math.random() * 1.5 + 0.5,
+      size: Math.random() * 2,
       speed: Math.random() * 0.5 + 0.2
-    }));
-    cloudsRef.current = Array.from({ length: 8 }, () => ({
-      x: Math.random() * CANVAS_WIDTH,
-      y: Math.random() * CANVAS_HEIGHT,
-      size: Math.random() * 100 + 100,
-      speed: Math.random() * 1.5 + 1.0,
-      opacity: Math.random() * 0.15 + 0.05
     }));
   }, []);
 
   const createExplosion = (x, y, isBoss = false) => {
-    const count = isBoss ? 60 : 15;
+    const count = isBoss ? 50 : 12;
     for (let i = 0; i < count; i++) {
         particlesRef.current.push({
-            x: x + (isBoss ? (Math.random() - 0.5) * 80 : 0),
-            y: y + (isBoss ? (Math.random() - 0.5) * 50 : 0),
-            vx: (Math.random() - 0.5) * (isBoss ? 10 : 5),
-            vy: (Math.random() - 0.5) * (isBoss ? 10 : 5),
+            x: x + (Math.random() - 0.5) * (isBoss ? 60 : 10),
+            y: y + (Math.random() - 0.5) * (isBoss ? 60 : 10),
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6,
             life: 1.0,
             color: COLORS.EXPLOSION[Math.floor(Math.random() * COLORS.EXPLOSION.length)]
         });
@@ -74,32 +66,23 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     audio.playExplosion(isBoss);
   };
 
-  const spawnBoss = useCallback(() => {
-    if (bossActiveRef.current) return;
-    bossActiveRef.current = true;
-    const config = ENEMY_TYPES.BOSS;
-    enemiesRef.current.push({
-      x: CANVAS_WIDTH / 2 - config.width / 2, y: -config.height,
-      width: config.width, height: config.height, speed: config.speed,
-      type: 'BOSS', health: config.health + (level - 1) * 100, maxHealth: config.health + (level - 1) * 100,
-      fireCooldown: config.fireRate, bulletType: 'BOSS_CIRCLE'
-    });
-  }, [level]);
-
-  // --- RESTORED ARCADE DRAWING ---
   const drawPropeller = (ctx, x, y, size, color) => {
     ctx.save();
-    ctx.translate(x, y); ctx.rotate((frameCountRef.current * 0.8) % (Math.PI * 2));
-    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.translate(x, y);
+    ctx.rotate((frameCountRef.current * 0.8) % (Math.PI * 2));
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(-size, 0); ctx.lineTo(size, 0); ctx.stroke();
     ctx.restore();
   };
 
   const drawExhaust = (ctx, x, y, isPlayer) => {
-    const flicker = Math.random() * 10;
-    const grad = ctx.createLinearGradient(x, y, x, y + 15 + flicker);
-    grad.addColorStop(0, isPlayer ? '#60a5fa' : '#ef4444'); grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad; ctx.beginPath(); ctx.ellipse(x, y + 10, 3, 8 + flicker/2, 0, 0, Math.PI * 2); ctx.fill();
+    const flicker = Math.random() * 8;
+    const grad = ctx.createLinearGradient(x, y, x, y + 15);
+    grad.addColorStop(0, isPlayer ? '#60a5fa' : '#ef4444');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.ellipse(x, y + 8, 3, 6 + flicker, 0, 0, Math.PI * 2); ctx.fill();
   };
 
   const drawPlayerPlane = (ctx, p) => {
@@ -108,37 +91,20 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     ctx.save();
     const bankScale = 1 - Math.abs(tilt) * 0.2;
     ctx.translate(cx, cy); ctx.scale(bankScale, 1); ctx.rotate(tilt * 0.1); ctx.translate(-cx, -cy);
+    
     // Wings
-    const wingGrad = ctx.createLinearGradient(x, y, x + width, y);
-    wingGrad.addColorStop(0, '#1e3a8a'); wingGrad.addColorStop(0.5, '#3b82f6'); wingGrad.addColorStop(1, '#1e3a8a');
-    ctx.fillStyle = wingGrad; ctx.beginPath(); ctx.moveTo(x, y + height * 0.45); ctx.lineTo(x + width, y + height * 0.45);
-    ctx.lineTo(x + width * 0.9, y + height * 0.55); ctx.lineTo(x + width * 0.1, y + height * 0.55); ctx.fill();
-    // Fuselage
-    ctx.fillStyle = '#60a5fa'; ctx.beginPath(); ctx.moveTo(cx, y); ctx.bezierCurveTo(cx - 12, y + 5, cx - 10, y + height, cx, y + height);
-    ctx.bezierCurveTo(cx + 10, y + height, cx + 12, y + 5, cx, y); ctx.fill();
-    // Propellers
-    drawPropeller(ctx, cx - 14, y + 12, 14, 'rgba(255,255,255,0.4)'); drawPropeller(ctx, cx + 14, y + 12, 14, 'rgba(255,255,255,0.4)');
-    drawExhaust(ctx, cx - 12, y + height - 5, true); drawExhaust(ctx, cx + 12, y + height - 5, true);
-    ctx.restore();
-  };
-
-  const drawEnemyPlane = (ctx, e) => {
-    const { x, y, width, height, type } = e;
-    const cx = x + width / 2;
-    ctx.save();
-    if (type === 'BOSS') {
-      ctx.fillStyle = COLORS.ENEMY_BOSS; ctx.fillRect(x, y + height * 0.4, width, height * 0.25);
-      ctx.fillStyle = '#450a0a'; ctx.fillRect(x + width * 0.35, y, width * 0.3, height);
-      ctx.fillStyle = '#ef4444'; ctx.fillRect(x, y - 15, width * (e.health/e.maxHealth), 5);
-    } else if (type === 'BOMBER') {
-      ctx.fillStyle = COLORS.ENEMY_BOMBER; ctx.fillRect(x, y + height * 0.3, width, height * 0.2);
-      ctx.fillRect(cx - 10, y, 20, height);
-      drawPropeller(ctx, cx - 18, y + 15, 16, 'rgba(255,255,255,0.3)'); drawPropeller(ctx, cx + 18, y + 15, 16, 'rgba(255,255,255,0.3)');
-    } else {
-      ctx.fillStyle = COLORS[`ENEMY_${type}`] || '#f00';
-      ctx.beginPath(); ctx.moveTo(cx, y + height); ctx.lineTo(x, y + height * 0.2); ctx.lineTo(x + width, y + height * 0.2); ctx.fill();
-      drawPropeller(ctx, cx, y + height, 12, 'rgba(255,255,255,0.4)');
-    }
+    ctx.fillStyle = '#1e40af';
+    ctx.beginPath(); ctx.moveTo(x, y + height * 0.4); ctx.lineTo(x + width, y + height * 0.4);
+    ctx.lineTo(x + width * 0.8, y + height * 0.6); ctx.lineTo(x + width * 0.2, y + height * 0.6); ctx.fill();
+    
+    // Body
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath(); ctx.ellipse(cx, cy, width/4, height/2, 0, 0, Math.PI * 2); ctx.fill();
+    
+    drawPropeller(ctx, cx - 12, y + 10, 12, 'rgba(255,255,255,0.4)');
+    drawPropeller(ctx, cx + 12, y + 10, 12, 'rgba(255,255,255,0.4)');
+    drawExhaust(ctx, cx - 10, y + height - 5, true);
+    drawExhaust(ctx, cx + 10, y + height - 5, true);
     ctx.restore();
   };
 
@@ -158,99 +124,82 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     player.y = Math.max(0, Math.min(CANVAS_HEIGHT - player.height, player.y));
 
     if (keysPressed.current[' '] && player.fireCooldown <= 0) {
-      const cx = player.x + player.width / 2; const py = player.y; const bSpeed = 9;
       audio.playShoot();
-      if (player.weaponLevel >= 1) bulletsRef.current.push({ x: cx - 2, y: py, width: 4, height: 14, speed: bSpeed, damage: 1, isPlayerBullet: true, vx: 0, vy: -bSpeed });
-      if (player.weaponLevel >= 2) {
-        bulletsRef.current.push({ x: cx - 12, y: py + 10, width: 4, height: 14, speed: bSpeed, damage: 1, isPlayerBullet: true, vx: 0, vy: -bSpeed });
-        bulletsRef.current.push({ x: cx + 8, y: py + 10, width: 4, height: 14, speed: bSpeed, damage: 1, isPlayerBullet: true, vx: 0, vy: -bSpeed });
-      }
+      bulletsRef.current.push({ x: player.x + player.width/2 - 2, y: player.y, width: 4, height: 12, speed: 9, damage: 1, isPlayerBullet: true, vx: 0, vy: -9 });
       player.fireCooldown = 12;
     }
     if (player.fireCooldown > 0) player.fireCooldown--;
 
-    if (!bossActiveRef.current && (player.score - initialScore) >= LEVEL_THRESHOLDS[level-1]) spawnBoss();
-
-    starsRef.current.forEach(s => { s.y += s.speed; if (s.y > CANVAS_HEIGHT) s.y = -10; });
-    cloudsRef.current.forEach(c => { c.y += c.speed; if (c.y > CANVAS_HEIGHT + c.size) { c.y = -c.size; c.x = Math.random() * CANVAS_WIDTH; } });
-
-    bulletsRef.current = bulletsRef.current.filter(b => {
-      b.x += b.vx; b.y += b.vy; return b.y > -50 && b.y < CANVAS_HEIGHT + 50;
-    });
-
-    if (Math.random() < 0.02 && !bossActiveRef.current) {
-        const types = ['SCOUT', 'BOMBER', 'ACE'];
-        const typeKey = types[Math.floor(Math.random() * types.length)];
-        const config = ENEMY_TYPES[typeKey];
-        enemiesRef.current.push({
-          x: Math.random() * (CANVAS_WIDTH - config.width), y: -config.height,
-          width: config.width, height: config.height, speed: config.speed + level * 0.1,
-          type: typeKey, health: config.health, maxHealth: config.health, fireCooldown: 60, bulletType: 'NORMAL'
-        });
+    if (Math.random() < 0.02) {
+      enemiesRef.current.push({
+        x: Math.random() * (CANVAS_WIDTH - 30), y: -40, width: 30, height: 30,
+        speed: 2 + level * 0.2, health: 1, type: 'SCOUT'
+      });
     }
 
     enemiesRef.current = enemiesRef.current.filter(e => {
       e.y += e.speed;
-      if (e.x < player.x + player.width && e.x + e.width > player.x && e.y < player.y + player.height && e.y + e.height > player.y) {
-        player.health -= 10; return false;
-      }
-      return e.y < CANVAS_HEIGHT + 100;
+      if (Math.abs(e.x - player.x) < 30 && Math.abs(e.y - player.y) < 30) { player.health -= 20; createExplosion(e.x, e.y); return false; }
+      return e.y < CANVAS_HEIGHT + 50;
     });
 
-    bulletsRef.current.forEach((b, bIdx) => {
+    bulletsRef.current = bulletsRef.current.filter(b => {
+      b.y += b.vy;
+      let hit = false;
       if (b.isPlayerBullet) {
-        enemiesRef.current.forEach((e, eIdx) => {
+        enemiesRef.current.forEach(e => {
           if (b.x < e.x + e.width && b.x + b.width > e.x && b.y < e.y + e.height && b.y + b.height > e.y) {
-            e.health -= b.damage; bulletsRef.current.splice(bIdx, 1);
-            if (e.health <= 0) {
-              player.score += e.type === 'BOSS' ? 5000 : 100;
-              if (e.type === 'BOSS') { createExplosion(e.x + width/2, e.y + height/2, true); bossActiveRef.current = false; onLevelClear(player.score, player.weaponLevel); }
-              else createExplosion(e.x, e.y);
-              enemiesRef.current.splice(eIdx, 1);
-            }
+            e.health -= b.damage; hit = true;
+            if (e.health <= 0) { player.score += 100; createExplosion(e.x + e.width/2, e.y + e.height/2); }
           }
         });
       }
+      return !hit && b.y > -20 && b.y < CANVAS_HEIGHT + 20;
     });
+    enemiesRef.current = enemiesRef.current.filter(e => e.health > 0);
 
     if (player.health <= 0) onGameOver(player.score);
-  }, [level, isPaused, initialScore, onGameOver, onLevelClear, spawnBoss, tilt]);
+  }, [level, isPaused, onGameOver]);
 
   const draw = useCallback((ctx) => {
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    starsRef.current.forEach(s => ctx.fillRect(s.x, s.y, s.size, s.size));
-    bulletsRef.current.forEach(b => { ctx.fillStyle = b.isPlayerBullet ? '#60a5fa' : '#f87171'; ctx.fillRect(b.x, b.y, b.width, b.height); });
-    enemiesRef.current.forEach(e => drawEnemyPlane(ctx, e));
+    starsRef.current.forEach(s => { s.y += s.speed; if (s.y > CANVAS_HEIGHT) s.y = -10; ctx.fillRect(s.x, s.y, s.size, s.size); });
+    
+    bulletsRef.current.forEach(b => { ctx.fillStyle = '#60a5fa'; ctx.fillRect(b.x, b.y, b.width, b.height); });
+    enemiesRef.current.forEach(e => {
+       ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(e.x + e.width/2, e.y + e.height); ctx.lineTo(e.x, e.y); ctx.lineTo(e.x + e.width, e.y); ctx.fill();
+    });
+    
     drawPlayerPlane(ctx, playerRef.current);
+    particlesRef.current = particlesRef.current.filter(p => {
+      p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+      ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+      return p.life > 0;
+    });
+    ctx.globalAlpha = 1.0;
   }, []);
 
-  const gameLoop = useCallback(() => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext('2d'); if (!ctx) return;
-    update(); draw(ctx);
-    requestRef.current = requestAnimationFrame(gameLoop);
+  const loop = useCallback(() => {
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) { update(); draw(ctx); }
+    requestRef.current = requestAnimationFrame(loop);
   }, [update, draw]);
 
   useEffect(() => {
-    const handleKeyDown = (e) => { keysPressed.current[e.key] = true; if (e.key === ' ') keysPressed.current[' '] = true; };
-    const handleKeyUp = (e) => keysPressed.current[e.key] = false;
-    window.addEventListener('keydown', handleKeyDown); window.addEventListener('keyup', handleKeyUp);
-    requestRef.current = requestAnimationFrame(gameLoop);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp);
-      cancelAnimationFrame(requestRef.current);
-    };
-  }, [gameLoop]);
+    const kd = (e) => { keysPressed.current[e.key] = true; keysPressed.current[' '] = true; };
+    const ku = (e) => keysPressed.current[e.key] = false;
+    window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
+    requestRef.current = requestAnimationFrame(loop);
+    return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); cancelAnimationFrame(requestRef.current); };
+  }, [loop]);
 
-  // HUD and Canvas UI
   return h('div', { className: 'w-full h-full relative' },
     h('canvas', { ref: canvasRef, width: CANVAS_WIDTH, height: CANVAS_HEIGHT, className: 'w-full h-full' }),
-    h('div', { className: 'absolute top-2 left-4 flex flex-col pointer-events-none' },
-      h('div', { className: 'text-white font-bold text-lg' }, `SCORE: ${playerRef.current.score.toLocaleString()}`),
-      h('div', { className: 'w-32 h-2 bg-black/50 border border-white/30 mt-1' },
-        h('div', { className: 'h-full bg-green-500 transition-all', style: { width: `${(playerRef.current.health/playerRef.current.maxHealth)*100}%` } })
+    h('div', { className: 'absolute top-4 left-4 pointer-events-none' },
+      h('div', { className: 'text-white font-bold' }, `SCORE: ${playerRef.current.score}`),
+      h('div', { className: 'w-32 h-2 bg-red-900 mt-1 border border-white/20' },
+        h('div', { className: 'h-full bg-green-500', style: { width: `${(playerRef.current.health/playerRef.current.maxHealth)*100}%` } })
       )
     )
   );
