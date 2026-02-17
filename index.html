@@ -7,6 +7,10 @@
     <title>Sky Strike 1945</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+      // Shim process.env to prevent "process is not defined" errors during load
+      window.process = window.process || { env: { API_KEY: "" } };
+    </script>
     <style>
       body {
         margin: 0;
@@ -25,21 +29,23 @@
       .animate-fadeIn {
         animation: fadeIn 0.5s ease-out forwards;
       }
+      canvas {
+        image-rendering: pixelated;
+      }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
-  }
-}
-</script>
-</head>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.4",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+        "react/": "https://esm.sh/react@^19.2.4/",
+        "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
+      }
+    }
+    </script>
+  </head>
   <body>
     <div id="root"></div>
-    <!-- Explicitly import the entry point to ensure loading on static servers like GitHub Pages -->
     <script type="module" src="./index.tsx"></script>
   </body>
 </html>

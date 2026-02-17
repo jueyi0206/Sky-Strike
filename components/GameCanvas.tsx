@@ -16,13 +16,14 @@ import { audio } from '../services/audioService';
 
 interface GameCanvasProps {
   level: number;
+  isPaused: boolean;
   initialScore: number;
   initialWeaponLevel: number;
   onGameOver: (score: number) => void;
   onLevelClear: (score: number, finalWeaponLevel: number) => void;
 }
 
-const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWeaponLevel, onGameOver, onLevelClear }) => {
+const GameCanvas: React.FC<GameCanvasProps> = ({ level, isPaused, initialScore, initialWeaponLevel, onGameOver, onLevelClear }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number | null>(null);
   const frameCountRef = useRef(0);
@@ -81,6 +82,25 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
     audio.playExplosion(isBoss);
   };
 
+  const spawnBoss = useCallback(() => {
+    if (bossActiveRef.current) return;
+    bossActiveRef.current = true;
+    const config = ENEMY_TYPES.BOSS;
+    enemiesRef.current.push({
+      x: CANVAS_WIDTH / 2 - config.width / 2,
+      y: -config.height,
+      width: config.width,
+      height: config.height,
+      speed: config.speed,
+      type: 'BOSS',
+      health: config.health + (level - 1) * 100,
+      maxHealth: config.health + (level - 1) * 100,
+      fireCooldown: config.fireRate,
+      bulletType: 'BOSS_CIRCLE'
+    });
+  }, [level]);
+
+  // --- Visual Helper Functions ---
   const drawPropeller = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) => {
     ctx.save();
     ctx.translate(x, y);
@@ -117,6 +137,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
     ctx.rotate(tilt * 0.1);
     ctx.translate(-cx, -cy);
 
+    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.beginPath();
     ctx.ellipse(cx + 10, cy + 20, width/2, height/2, 0, 0, Math.PI*2);
@@ -125,6 +146,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
     drawExhaust(ctx, cx - 12, y + height - 5, true);
     drawExhaust(ctx, cx + 12, y + height - 5, true);
 
+    // Wings
     const wingGrad = ctx.createLinearGradient(x, y, x + width, y);
     wingGrad.addColorStop(0, '#1e3a8a');
     wingGrad.addColorStop(0.5, '#3b82f6');
@@ -138,6 +160,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
     ctx.closePath();
     ctx.fill();
 
+    // Fuselage
     ctx.fillStyle = '#60a5fa';
     ctx.beginPath();
     ctx.moveTo(cx, y);
@@ -148,12 +171,14 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
     ctx.lineWidth = 1;
     ctx.stroke();
 
+    // Cockpit
     const cockGrad = ctx.createRadialGradient(cx, y + 15, 2, cx, y + 15, 8);
     cockGrad.addColorStop(0, '#fff');
     cockGrad.addColorStop(1, '#0891b2');
     ctx.fillStyle = cockGrad;
     ctx.beginPath(); ctx.ellipse(cx, y + 18, 4, 6, 0, 0, Math.PI*2); ctx.fill();
 
+    // Propellers
     drawPropeller(ctx, cx - 14, y + 12, 14, 'rgba(255,255,255,0.4)');
     drawPropeller(ctx, cx + 14, y + 12, 14, 'rgba(255,255,255,0.4)');
 
@@ -181,6 +206,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
       ctx.beginPath(); ctx.arc(cx + width*0.2, y + height*0.5, 10, 0, Math.PI*2); ctx.fill();
       drawExhaust(ctx, cx - 30, y + 10, false);
       drawExhaust(ctx, cx + 30, y + 10, false);
+      
+      // Boss Health Bar
       ctx.fillStyle = '#222'; ctx.fillRect(x, y - 20, width, 6);
       ctx.fillStyle = '#ef4444'; ctx.fillRect(x, y - 20, width * (e.health/e.maxHealth), 6);
     } else if (type === 'BOMBER') {
@@ -193,39 +220,23 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
       drawPropeller(ctx, cx - 18, y + 15, 16, 'rgba(255,255,255,0.3)');
       drawPropeller(ctx, cx + 18, y + 15, 16, 'rgba(255,255,255,0.3)');
     } else {
-      ctx.fillStyle = COLORS[`ENEMY_${type}` as keyof typeof COLORS] as string;
+      const colorKey = `ENEMY_${type}` as keyof typeof COLORS;
+      const enemyColor = COLORS[colorKey] as string;
+      ctx.fillStyle = enemyColor || '#f00';
       ctx.beginPath();
       ctx.moveTo(cx, y + height);
       ctx.lineTo(x, y + height * 0.2);
       ctx.lineTo(x + width, y + height * 0.2);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x + 5, y + height*0.3, 3, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + width - 5, y + height*0.3, 3, 0, Math.PI*2); ctx.fill();
       drawPropeller(ctx, cx, y + height, 12, 'rgba(255,255,255,0.4)');
     }
     ctx.restore();
   };
 
-  const spawnBoss = useCallback(() => {
-    if (bossActiveRef.current) return;
-    bossActiveRef.current = true;
-    const config = ENEMY_TYPES.BOSS;
-    enemiesRef.current.push({
-      x: CANVAS_WIDTH / 2 - config.width / 2,
-      y: -config.height,
-      width: config.width,
-      height: config.height,
-      speed: 0.5,
-      type: 'BOSS',
-      health: config.health * (1 + (level - 1) * 0.6),
-      maxHealth: config.health * (1 + (level - 1) * 0.6),
-      fireCooldown: config.fireRate,
-      bulletType: level === 3 ? 'BOSS_BURST' : 'BOSS_CIRCLE'
-    });
-  }, [level]);
-
   const update = useCallback(() => {
+    if (isPaused) return;
+
     frameCountRef.current++;
     const player = playerRef.current;
     
@@ -244,7 +255,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
       const cx = player.x + player.width / 2;
       const py = player.y;
       const bSpeed = 9;
-      
       audio.playShoot();
 
       if (player.weaponLevel >= 1) bulletsRef.current.push({ x: cx - 2, y: py, width: 4, height: 14, speed: bSpeed, damage: 1, isPlayerBullet: true, vx: 0, vy: -bSpeed });
@@ -306,7 +316,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
         if (e.fireCooldown <= 0) {
           const bcx = e.x + e.width / 2;
           const bcy = e.y + e.height - 20;
-          const bulletCount = level === 1 ? 12 : 16;
+          const bulletCount = 12 + level * 2;
           for (let i = 0; i < bulletCount; i++) {
             const angle = (i / bulletCount) * Math.PI * 2 + (frameCountRef.current * 0.05);
             bulletsRef.current.push({ x: bcx, y: bcy, width: 8, height: 8, speed: 3.5, damage: 15, isPlayerBullet: false, vx: Math.cos(angle) * 2.5, vy: Math.sin(angle) * 2.5 });
@@ -347,7 +357,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
               if (e.type === 'BOSS') { 
                 createExplosion(e.x + e.width/2, e.y + e.height/2, true);
                 bossActiveRef.current = false; 
-                // CRITICAL: Ensure we pass current weapon level to preserve it
                 onLevelClear(player.score, player.weaponLevel); 
               } else {
                 createExplosion(e.x + e.width/2, e.y + e.height/2);
@@ -389,13 +398,17 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
       onGameOver(player.score);
       if (requestRef.current !== null) cancelAnimationFrame(requestRef.current);
     }
-  }, [level, initialScore, onGameOver, onLevelClear, spawnBoss, tilt]);
+  }, [level, isPaused, initialScore, onGameOver, onLevelClear, spawnBoss, tilt]);
 
   const draw = useCallback((ctx: CanvasRenderingContext2D) => {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
+    // Background
     const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
     skyGrad.addColorStop(0, '#020617'); skyGrad.addColorStop(1, '#1e1b4b');
     ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
+    // Stars & Clouds
     ctx.fillStyle = '#fff';
     starsRef.current.forEach(s => { ctx.globalAlpha = 0.3; ctx.fillRect(s.x, s.y, s.size, s.size); });
     cloudsRef.current.forEach(c => {
@@ -404,6 +417,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
     });
     ctx.globalAlpha = 1.0;
 
+    // Particles
     particlesRef.current.forEach(p => {
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;
@@ -411,44 +425,56 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
     });
     ctx.globalAlpha = 1.0;
 
+    // Bullets
     bulletsRef.current.forEach(b => {
       ctx.fillStyle = b.isPlayerBullet ? COLORS.PLAYER_BULLET : COLORS.ENEMY_BULLET;
       ctx.shadowBlur = b.isPlayerBullet ? 8 : 4; ctx.shadowColor = ctx.fillStyle as string;
       ctx.fillRect(b.x, b.y, b.width, b.height); ctx.shadowBlur = 0;
     });
+
+    // PowerUps
     powerUpsRef.current.forEach(p => {
       ctx.fillStyle = p.type === 'WEAPON' ? COLORS.POWERUP_WEAPON : COLORS.POWERUP_HEALTH;
       ctx.beginPath(); ctx.arc(p.x + p.width/2, p.y + p.height/2, p.width/2, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
       ctx.fillText(p.type === 'WEAPON' ? 'W' : 'H', p.x + p.width/2, p.y + p.height/2 + 4);
     });
+
+    // Entities
     enemiesRef.current.forEach(e => drawEnemyPlane(ctx, e));
     drawPlayerPlane(ctx, playerRef.current);
+
+    // HUD
     ctx.fillStyle = '#fff'; ctx.font = '700 16px "Space Grotesk"'; ctx.textAlign = 'left';
     ctx.fillText(`LV${level} | SCORE: ${playerRef.current.score.toLocaleString()}`, 20, 35);
     const barWidth = 140; const hpX = CANVAS_WIDTH - barWidth - 20;
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(hpX, 25, barWidth, 14);
     const hpPct = Math.max(0, playerRef.current.health / playerRef.current.maxHealth);
-    const hpGrad = ctx.createLinearGradient(hpX, 0, hpX + barWidth, 0);
-    hpGrad.addColorStop(0, '#ef4444'); hpGrad.addColorStop(1, '#10b981');
-    ctx.fillStyle = hpGrad; ctx.fillRect(hpX, 25, barWidth * hpPct, 14);
+    ctx.fillStyle = hpPct > 0.3 ? '#10b981' : '#ef4444';
+    ctx.fillRect(hpX, 25, barWidth * hpPct, 14);
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(hpX, 25, barWidth, 14);
     ctx.fillStyle = '#fff'; ctx.font = '700 12px "Space Grotesk"';
     ctx.fillText(`POWER: STAGE ${playerRef.current.weaponLevel}`, 20, 55);
-  }, [level, drawPlayerPlane, drawEnemyPlane]);
+  }, [level, isPaused]); // Re-draw on pause state change to show overlay properly if needed
 
   const gameLoop = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    
     update();
     draw(ctx);
+    
     requestRef.current = requestAnimationFrame(gameLoop);
   }, [update, draw]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { keysPressed.current[e.key] = true; keysPressed.current[' '] = true; };
+    const handleKeyDown = (e: KeyboardEvent) => { 
+      if (isPaused) return;
+      keysPressed.current[e.key] = true; 
+      keysPressed.current[' '] = true; 
+    };
     const handleKeyUp = (e: KeyboardEvent) => keysPressed.current[e.key] = false;
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -458,7 +484,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
       window.removeEventListener('keyup', handleKeyUp);
       if (requestRef.current !== null) cancelAnimationFrame(requestRef.current);
     };
-  }, [gameLoop]);
+  }, [gameLoop, isPaused]);
 
   return (
     <canvas 
@@ -467,6 +493,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
       height={CANVAS_HEIGHT}
       className="w-full h-full cursor-crosshair touch-none"
       onMouseMove={(e) => {
+        if (isPaused) return;
         const rect = canvasRef.current?.getBoundingClientRect();
         if (rect) {
           const targetX = ((e.clientX - rect.left) / rect.width) * CANVAS_WIDTH - PLAYER_WIDTH / 2;
@@ -477,7 +504,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
           keysPressed.current[' '] = true;
         }
       }}
-      onMouseDown={() => keysPressed.current[' '] = true}
+      onMouseDown={() => { if (!isPaused) keysPressed.current[' '] = true; }}
     />
   );
 };
