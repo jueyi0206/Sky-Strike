@@ -342,10 +342,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, isPaused, initialScore, 
     
     ctx.fillStyle = '#fff';
     starsRef.current.forEach(s => { ctx.globalAlpha = 0.3; ctx.fillRect(s.x, s.y, s.size, s.size); });
-    cloudsRef.current.forEach(c => { ctx.globalAlpha = c.opacity; ctx.beginPath(); ctx.arc(c.x, c.y, c.size, 0, Math.PI*2); ctx.fill(); });
+    cloudsRef.current.forEach(c => { ctx.globalAlpha = c.opacity; ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(0, c.size), 0, Math.PI*2); ctx.fill(); });
     ctx.globalAlpha = 1.0;
 
-    particlesRef.current.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 4 * p.life, 0, Math.PI * 2); ctx.fill(); });
+    particlesRef.current.forEach(p => { 
+        ctx.globalAlpha = p.life; 
+        ctx.fillStyle = p.color; 
+        ctx.beginPath(); 
+        ctx.arc(p.x, p.y, Math.max(0, 4 * p.life), 0, Math.PI * 2); 
+        ctx.fill(); 
+    });
     ctx.globalAlpha = 1.0;
 
     bulletsRef.current.forEach(b => {
@@ -356,7 +362,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, isPaused, initialScore, 
 
     powerUpsRef.current.forEach(p => {
       ctx.fillStyle = p.type === 'WEAPON' ? COLORS.POWERUP_WEAPON : COLORS.POWERUP_HEALTH;
-      ctx.beginPath(); ctx.arc(p.x + p.width/2, p.y + p.height/2, p.width/2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x + p.width/2, p.y + p.height/2, Math.max(0, p.width/2), 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText(p.type === 'WEAPON' ? 'W' : 'H', p.x + p.width/2, p.y + p.height/2 + 4);
     });
 

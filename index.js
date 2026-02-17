@@ -7,32 +7,32 @@ const h = React.createElement;
 // --- 1. 常數定義 (Constants) ---
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 800;
-const PLAYER_SPEED = 4.5; 
+const PLAYER_SPEED = 3.2; 
 const PLAYER_WIDTH = 44;
 const PLAYER_HEIGHT = 44;
 const PLAYER_START_HEALTH = 250;
 
 const ENEMY_TYPES = {
-  SCOUT: { width: 32, height: 32, speed: 2.0, health: 1, fireRate: 120 },
-  BOMBER: { width: 60, height: 50, speed: 1.0, health: 8, fireRate: 180 },
-  ACE: { width: 42, height: 42, speed: 2.5, health: 4, fireRate: 80 },
-  BOSS: { width: 180, height: 120, speed: 0.8, health: 120, fireRate: 50 }
+  SCOUT: { width: 32, height: 32, speed: 1.3, health: 1, fireRate: 140 },
+  BOMBER: { width: 64, height: 48, speed: 0.5, health: 12, fireRate: 210 },
+  ACE: { width: 40, height: 40, speed: 1.8, health: 5, fireRate: 100 },
+  BOSS: { width: 180, height: 120, speed: 0.35, health: 150, fireRate: 70 }
 };
 
 const COLORS = {
   PLAYER: '#3b82f6',
   ENEMY_SCOUT: '#ef4444',
-  ENEMY_BOMBER: '#991b1b',
-  ENEMY_ACE: '#f59e0b',
-  ENEMY_BOSS: '#7f1d1d',
+  ENEMY_BOMBER: '#7f1d1d',
+  ENEMY_ACE: '#f97316',
+  ENEMY_BOSS: '#450a0a',
   PLAYER_BULLET: '#60a5fa',
-  ENEMY_BULLET: '#fca5a5',
+  ENEMY_BULLET: '#f87171',
   POWERUP_WEAPON: '#fbbf24',
   POWERUP_HEALTH: '#10b981',
   EXPLOSION: ['#f59e0b', '#ef4444', '#7f1d1d']
 };
 
-const LEVEL_THRESHOLDS = [1500, 4500, 9000];
+const LEVEL_THRESHOLDS = [1500, 4500, 9500];
 
 // --- 2. 音效服務 (Audio Service) ---
 class AudioService {
@@ -40,16 +40,12 @@ class AudioService {
     this.ctx = null;
     this.bgmGain = null;
   }
-
   init() {
     if (!this.ctx) {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
   }
-
   playShoot() {
     this.init();
     if (!this.ctx) return;
@@ -58,13 +54,10 @@ class AudioService {
     osc.type = 'square';
     osc.frequency.setValueAtTime(450, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+    osc.connect(gain); gain.connect(this.ctx.destination);
+    osc.start(); osc.stop(this.ctx.currentTime + 0.08);
   }
-
   playExplosion(isBoss = false) {
     this.init();
     if (!this.ctx) return;
@@ -78,14 +71,11 @@ class AudioService {
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(isBoss ? 600 : 300, this.ctx.currentTime);
     const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(isBoss ? 0.5 : 0.25, this.ctx.currentTime);
+    gain.gain.setValueAtTime(isBoss ? 0.4 : 0.2, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + (isBoss ? 1.2 : 0.25));
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.ctx.destination);
+    noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
     noise.start();
   }
-
   playPowerup() {
     this.init();
     if (!this.ctx) return;
@@ -98,23 +88,20 @@ class AudioService {
     osc.connect(gain); gain.connect(this.ctx.destination);
     osc.start(); osc.stop(this.ctx.currentTime + 0.2);
   }
-
   playStageClear() {
     this.init();
     if (!this.ctx) return;
-    [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+    [523, 659, 783, 1046].forEach((f, i) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'square';
       osc.frequency.setValueAtTime(f, this.ctx.currentTime + i * 0.12);
-      gain.gain.setValueAtTime(0.08, this.ctx.currentTime + i * 0.12);
+      gain.gain.setValueAtTime(0.06, this.ctx.currentTime + i * 0.12);
       gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.12 + 0.3);
       osc.connect(gain); gain.connect(this.ctx.destination);
-      osc.start(this.ctx.currentTime + i * 0.12);
-      osc.stop(this.ctx.currentTime + i * 0.12 + 0.3);
+      osc.start(this.ctx.currentTime + i * 0.12); osc.stop(this.ctx.currentTime + i * 0.12 + 0.3);
     });
   }
-
   playVictory() {
     this.init();
     if (!this.ctx) return;
@@ -123,18 +110,16 @@ class AudioService {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.frequency.value = f;
-      gain.gain.setValueAtTime(0.08, this.ctx.currentTime + i * 0.2);
+      gain.gain.setValueAtTime(0.06, this.ctx.currentTime + i * 0.2);
       osc.connect(gain); gain.connect(this.ctx.destination);
-      osc.start(this.ctx.currentTime + i * 0.2);
-      osc.stop(this.ctx.currentTime + i * 0.2 + 0.4);
+      osc.start(this.ctx.currentTime + i * 0.2); osc.stop(this.ctx.currentTime + i * 0.2 + 0.4);
     });
   }
-
   startBGM() {
     this.init();
     if (!this.ctx) return;
     this.bgmGain = this.ctx.createGain();
-    this.bgmGain.gain.value = 0.04;
+    this.bgmGain.gain.value = 0.03;
     this.bgmGain.connect(this.ctx.destination);
     const interval = setInterval(() => {
       if (!this.ctx || !this.bgmGain) return;
@@ -142,7 +127,7 @@ class AudioService {
       const freq = [65, 65, 73, 55][Math.floor(Date.now() / 600) % 4];
       osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
       const g = this.ctx.createGain();
-      g.gain.setValueAtTime(0.05, this.ctx.currentTime);
+      g.gain.setValueAtTime(0.04, this.ctx.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
       osc.connect(g); g.connect(this.bgmGain);
       osc.start(); osc.stop(this.ctx.currentTime + 0.6);
@@ -152,17 +137,15 @@ class AudioService {
 }
 const audio = new AudioService();
 
-// --- 3. Gemini 服務 (Gemini Service) ---
+// --- 3. Gemini 服務 ---
 async function getMissionBriefing(level) {
   const defaults = [
     { title: "太平洋黎明", description: "突破敵軍第一道海上防線，確保後續登陸。", difficulty: "普通" },
     { title: "鋼鐵峽谷", description: "滲透山脈基地，摧毀敵方的秘密武器工廠。", difficulty: "困難" },
     { title: "最終審判", description: "直搗敵軍首部總部。為了自由，在此一搏。", difficulty: "極限" }
   ];
-
   const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || "";
   if (!apiKey) return defaults[level - 1] || defaults[0];
-
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
@@ -183,12 +166,11 @@ async function getMissionBriefing(level) {
     });
     return JSON.parse(response.text);
   } catch (error) {
-    console.error("Gemini failed:", error);
     return defaults[level - 1] || defaults[0];
   }
 }
 
-// --- 4. 遊戲畫布組件 (GameCanvas) ---
+// --- 4. 遊戲畫布組件 ---
 const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameOver, onLevelClear }) => {
   const canvasRef = useRef(null);
   const requestRef = useRef(null);
@@ -222,13 +204,13 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
       x: Math.random() * CANVAS_WIDTH,
       y: Math.random() * CANVAS_HEIGHT,
       size: Math.random() * 2,
-      speed: Math.random() * 0.4 + 0.2
+      speed: Math.random() * 0.3 + 0.1
     }));
     cloudsRef.current = Array.from({ length: 5 }, () => ({
       x: Math.random() * CANVAS_WIDTH,
       y: Math.random() * CANVAS_HEIGHT,
       size: Math.random() * 80 + 80,
-      speed: Math.random() * 1.2 + 0.8,
+      speed: Math.random() * 0.6 + 0.4,
       opacity: Math.random() * 0.1 + 0.05
     }));
   }, []);
@@ -248,10 +230,19 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     audio.playExplosion(isBoss);
   };
 
+  const drawExhaust = (ctx, x, y, isPlayer) => {
+    const flicker = Math.random() * 8;
+    const grad = ctx.createLinearGradient(x, y, x, y + 10);
+    grad.addColorStop(0, isPlayer ? '#60a5fa' : '#ef4444');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.ellipse(x, y + 6, 2, 4 + flicker, 0, 0, Math.PI * 2); ctx.fill();
+  };
+
   const drawPropeller = (ctx, x, y, size, color) => {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate((frameCountRef.current * 0.9) % (Math.PI * 2));
+    ctx.rotate((frameCountRef.current * 0.6) % (Math.PI * 2));
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(-size, 0); ctx.lineTo(size, 0); ctx.stroke();
@@ -264,22 +255,49 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     ctx.save();
     const bankScale = 1 - Math.abs(tilt) * 0.25;
     ctx.translate(cx, cy); ctx.scale(bankScale, 1); ctx.rotate(tilt * 0.12); ctx.translate(-cx, -cy);
-    
-    // Wings
     ctx.fillStyle = '#1e3a8a';
     ctx.beginPath(); ctx.moveTo(x, y + height * 0.45); ctx.lineTo(x + width, y + height * 0.45);
     ctx.lineTo(x + width * 0.85, y + height * 0.6); ctx.lineTo(x + width * 0.15, y + height * 0.6); ctx.fill();
-    
-    // Body
     ctx.fillStyle = '#3b82f6';
     ctx.beginPath(); ctx.ellipse(cx, cy, width/4.5, height/2.2, 0, 0, Math.PI * 2); ctx.fill();
-    
-    // Cockpit
     ctx.fillStyle = '#bae6fd';
     ctx.beginPath(); ctx.ellipse(cx, y + height*0.3, 4, 6, 0, 0, Math.PI*2); ctx.fill();
-
     drawPropeller(ctx, cx - 12, y + 10, 13, 'rgba(255,255,255,0.4)');
     drawPropeller(ctx, cx + 12, y + 10, 13, 'rgba(255,255,255,0.4)');
+    drawExhaust(ctx, cx - 10, y + height - 5, true);
+    drawExhaust(ctx, cx + 10, y + height - 5, true);
+    ctx.restore();
+  };
+
+  const drawEnemyPlane = (ctx, e) => {
+    const { x, y, width, height, type } = e;
+    const cx = x + width / 2;
+    ctx.save();
+    if (type === 'BOSS') {
+      ctx.fillStyle = COLORS.ENEMY_BOSS;
+      ctx.fillRect(cx - width*0.15, y, width*0.3, height);
+      ctx.fillRect(x, y + height * 0.4, width, height * 0.2);
+      ctx.fillRect(x + width * 0.2, y + height * 0.1, width * 0.6, height * 0.1);
+      ctx.fillStyle = '#111'; ctx.fillRect(cx - 10, y + height*0.2, 20, 15);
+      drawExhaust(ctx, cx - 40, y + 10, false); drawExhaust(ctx, cx + 40, y + 10, false);
+    } else if (type === 'BOMBER') {
+      ctx.fillStyle = COLORS.ENEMY_BOMBER;
+      ctx.fillRect(x, y + height * 0.35, width, 8);
+      ctx.fillRect(cx - 18, y, 8, height); ctx.fillRect(cx + 10, y, 8, height);
+      ctx.fillRect(cx - 20, y + height - 6, 40, 4);
+      drawPropeller(ctx, cx - 14, y + 10, 14, 'rgba(255,255,255,0.3)');
+      drawPropeller(ctx, cx + 14, y + 10, 14, 'rgba(255,255,255,0.3)');
+    } else if (type === 'ACE') {
+      ctx.fillStyle = COLORS.ENEMY_ACE;
+      ctx.beginPath(); ctx.moveTo(cx, y + height); ctx.lineTo(x, y + height * 0.2); ctx.lineTo(x + width, y + height * 0.2); ctx.closePath(); ctx.fill();
+      ctx.fillRect(x, y + height * 0.2, width, 6);
+      drawPropeller(ctx, cx, y + height, 12, 'rgba(255,255,255,0.4)');
+    } else {
+      ctx.fillStyle = COLORS.ENEMY_SCOUT;
+      ctx.fillRect(cx - 4, y, 8, height); ctx.fillRect(x, y + height * 0.3, width, 4);
+      ctx.fillRect(cx - 10, y + height - 4, 20, 2);
+      drawPropeller(ctx, cx, y + height, 10, 'rgba(255,255,255,0.4)');
+    }
     ctx.restore();
   };
 
@@ -298,68 +316,92 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     player.x = Math.max(0, Math.min(CANVAS_WIDTH - player.width, player.x));
     player.y = Math.max(0, Math.min(CANVAS_HEIGHT - player.height, player.y));
 
-    // 自動射擊邏輯
+    // --- 武器 5 階彈幕邏輯 ---
     if (player.fireCooldown <= 0) {
       audio.playShoot();
       const cx = player.x + player.width/2;
-      const bSpeed = 10;
-      bulletsRef.current.push({ x: cx - 2, y: player.y, width: 4, height: 14, damage: 1, isPlayerBullet: true, vx: 0, vy: -bSpeed });
-      if (player.weaponLevel >= 2) {
-        bulletsRef.current.push({ x: cx - 14, y: player.y + 10, width: 4, height: 14, damage: 1, isPlayerBullet: true, vx: 0, vy: -bSpeed });
-        bulletsRef.current.push({ x: cx + 10, y: player.y + 10, width: 4, height: 14, damage: 1, isPlayerBullet: true, vx: 0, vy: -bSpeed });
+      const bSpeed = 8;
+      let cooldown = 16; 
+      
+      const addBullet = (offX, offY, vx, vy, dmg = 1, color = COLORS.PLAYER_BULLET) => {
+        bulletsRef.current.push({ x: cx + offX - 2, y: player.y + offY, width: 4, height: 14, damage: dmg, isPlayerBullet: true, vx, vy, color });
+      };
+
+      if (player.weaponLevel === 1) {
+        addBullet(0, 0, 0, -bSpeed);
+      } else if (player.weaponLevel === 2) {
+        addBullet(-10, 10, 0, -bSpeed);
+        addBullet(10, 10, 0, -bSpeed);
+      } else if (player.weaponLevel === 3) {
+        addBullet(0, 0, 0, -bSpeed);
+        addBullet(-15, 12, -1.5, -bSpeed);
+        addBullet(15, 12, 1.5, -bSpeed);
+        cooldown = 14;
+      } else if (player.weaponLevel === 4) {
+        addBullet(-5, 0, 0, -bSpeed, 1.5);
+        addBullet(5, 0, 0, -bSpeed, 1.5);
+        addBullet(-25, 15, -2.5, -bSpeed * 0.9, 1, '#22d3ee');
+        addBullet(25, 15, 2.5, -bSpeed * 0.9, 1, '#22d3ee');
+        cooldown = 12;
+      } else if (player.weaponLevel >= 5) {
+        // 滿級彈幕
+        addBullet(0, -5, 0, -bSpeed * 1.2, 2, '#fbbf24');
+        addBullet(-12, 5, -0.5, -bSpeed);
+        addBullet(12, 5, 0.5, -bSpeed);
+        addBullet(-28, 15, -2.5, -bSpeed * 0.9, 1, '#22d3ee');
+        addBullet(28, 15, 2.5, -bSpeed * 0.9, 1, '#22d3ee');
+        addBullet(-45, 25, -4.5, -bSpeed * 0.8, 1, '#6366f1');
+        addBullet(45, 25, 4.5, -bSpeed * 0.8, 1, '#6366f1');
+        cooldown = 8; 
       }
-      player.fireCooldown = 12;
+      player.fireCooldown = cooldown;
     }
     if (player.fireCooldown > 0) player.fireCooldown--;
 
-    // 敵人生成
-    if (!bossActiveRef.current && Math.random() < 0.02) {
+    if (!bossActiveRef.current && Math.random() < 0.012) {
       const types = ['SCOUT', 'BOMBER', 'ACE'];
       const type = types[Math.floor(Math.random() * types.length)];
       const cfg = ENEMY_TYPES[type];
       enemiesRef.current.push({
         x: Math.random() * (CANVAS_WIDTH - cfg.width), y: -cfg.height, 
-        width: cfg.width, height: cfg.height, speed: cfg.speed + level * 0.2, 
+        width: cfg.width, height: cfg.height, speed: cfg.speed + level * 0.12, 
         health: cfg.health, maxHealth: cfg.health, type, fireCooldown: Math.random() * cfg.fireRate
       });
     }
 
-    // Boss 生成判定
     if (!bossActiveRef.current && (player.score - initialScore) >= LEVEL_THRESHOLDS[level-1]) {
       bossActiveRef.current = true;
       const bCfg = ENEMY_TYPES.BOSS;
       enemiesRef.current.push({
         x: CANVAS_WIDTH / 2 - bCfg.width / 2, y: -bCfg.height, 
         width: bCfg.width, height: bCfg.height, speed: bCfg.speed, 
-        health: bCfg.health + (level - 1) * 60, maxHealth: bCfg.health + (level - 1) * 60, 
+        health: bCfg.health + (level - 1) * 70, maxHealth: bCfg.health + (level - 1) * 70, 
         type: 'BOSS', fireCooldown: 60
       });
     }
 
-    // 更新各項實體
     enemiesRef.current = enemiesRef.current.filter(e => {
       if (e.type === 'BOSS') {
-        if (e.y < 80) e.y += e.speed; else e.x += Math.sin(frameCountRef.current / 60) * 1.5;
+        if (e.y < 80) e.y += e.speed; else e.x += Math.sin(frameCountRef.current / 80) * 1.1;
         if (e.fireCooldown <= 0) {
             const bcx = e.x + e.width/2; const bcy = e.y + e.height;
-            for(let i=0; i<8; i++) {
-                const angle = (i/8) * Math.PI * 2 + (frameCountRef.current * 0.05);
-                bulletsRef.current.push({ x: bcx, y: bcy, width: 8, height: 8, isPlayerBullet: false, vx: Math.cos(angle)*3, vy: Math.sin(angle)*3 });
+            for(let i=0; i<10; i++) {
+                const angle = (i/10) * Math.PI * 2 + (frameCountRef.current * 0.03);
+                bulletsRef.current.push({ x: bcx, y: bcy, width: 8, height: 8, isPlayerBullet: false, vx: Math.cos(angle)*2.2, vy: Math.sin(angle)*2.2, color: COLORS.ENEMY_BULLET });
             }
             e.fireCooldown = ENEMY_TYPES.BOSS.fireRate;
         }
       } else {
         e.y += e.speed;
         if (e.fireCooldown <= 0) {
-           bulletsRef.current.push({ x: e.x + e.width/2, y: e.y + e.height, width: 5, height: 10, isPlayerBullet: false, vx: 0, vy: 5 });
+           bulletsRef.current.push({ x: e.x + e.width/2, y: e.y + e.height, width: 5, height: 10, isPlayerBullet: false, vx: 0, vy: 3.5, color: COLORS.ENEMY_BULLET });
            e.fireCooldown = ENEMY_TYPES[e.type].fireRate;
         }
       }
       e.fireCooldown--;
-      // 碰撞檢測 (飛機對飛機)
-      if (Math.abs(e.x + e.width/2 - (player.x + player.width/2)) < (e.width + player.width)/2.5 && 
-          Math.abs(e.y + e.height/2 - (player.y + player.height/2)) < (e.height + player.height)/2.5) {
-        player.health -= 20; createExplosion(e.x + e.width/2, e.y + e.height/2); return false;
+      if (Math.abs(e.x + e.width/2 - (player.x + player.width/2)) < (e.width + player.width)/2.8 && 
+          Math.abs(e.y + e.height/2 - (player.y + player.height/2)) < (e.height + player.height)/2.8) {
+        player.health -= 25; createExplosion(e.x + e.width/2, e.y + e.height/2); return false;
       }
       return e.y < CANVAS_HEIGHT + 100;
     });
@@ -370,13 +412,13 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
       if (b.isPlayerBullet) {
         enemiesRef.current.forEach(e => {
           if (b.x < e.x + e.width && b.x + b.width > e.x && b.y < e.y + e.height && b.y + b.height > e.y) {
-            e.health -= b.damage || 1; hit = true;
+            e.health -= b.damage; hit = true;
             if (e.health <= 0) {
-              player.score += e.type === 'BOSS' ? 2000 : 100;
+              player.score += e.type === 'BOSS' ? 2500 : 100;
               createExplosion(e.x + e.width/2, e.y + e.height/2, e.type === 'BOSS');
               if (e.type === 'BOSS') { bossActiveRef.current = false; onLevelClear(player.score, player.weaponLevel); }
-              else if (Math.random() < 0.1) {
-                powerUpsRef.current.push({ x: e.x, y: e.y, width: 20, height: 20, type: Math.random() < 0.7 ? 'WEAPON' : 'HEALTH' });
+              else if (Math.random() < 0.14) {
+                powerUpsRef.current.push({ x: e.x, y: e.y, width: 20, height: 20, type: Math.random() < 0.75 ? 'WEAPON' : 'HEALTH' });
               }
             }
           }
@@ -391,16 +433,15 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     enemiesRef.current = enemiesRef.current.filter(e => e.health > 0);
 
     powerUpsRef.current = powerUpsRef.current.filter(p => {
-      p.y += 2;
+      p.y += 1.6;
       if (Math.abs(p.x - player.x) < 40 && Math.abs(p.y - player.y) < 40) {
         audio.playPowerup();
         if (p.type === 'WEAPON') player.weaponLevel = Math.min(5, player.weaponLevel + 1);
-        else player.health = Math.min(player.maxHealth, player.health + 40);
+        else player.health = Math.min(player.maxHealth, player.health + 45);
         return false;
       }
       return p.y < CANVAS_HEIGHT;
     });
-
     if (player.health <= 0) onGameOver(player.score);
   }, [level, isPaused, initialScore, onGameOver, onLevelClear]);
 
@@ -409,50 +450,29 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
     skyGrad.addColorStop(0, '#020617'); skyGrad.addColorStop(1, '#0f172a');
     ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    
-    // 背景星空與雲
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     starsRef.current.forEach(s => { s.y += s.speed; if (s.y > CANVAS_HEIGHT) s.y = -10; ctx.fillRect(s.x, s.y, s.size, s.size); });
     cloudsRef.current.forEach(c => { 
         c.y += c.speed; if (c.y > CANVAS_HEIGHT + c.size) c.y = -c.size;
-        ctx.globalAlpha = c.opacity; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(c.x, c.y, c.size, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = c.opacity; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(0, c.size), 0, Math.PI*2); ctx.fill();
     });
     ctx.globalAlpha = 1.0;
-
-    // 子彈
     bulletsRef.current.forEach(b => { 
-        ctx.fillStyle = b.isPlayerBullet ? '#60a5fa' : '#fca5a5'; 
+        ctx.fillStyle = b.color || COLORS.PLAYER_BULLET; 
         ctx.fillRect(b.x, b.y, b.width, b.height); 
     });
-
-    // 道具
     powerUpsRef.current.forEach(p => {
         ctx.fillStyle = p.type === 'WEAPON' ? '#fbbf24' : '#10b981';
         ctx.beginPath(); ctx.arc(p.x + 10, p.y + 10, 10, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(p.type[0], p.x+10, p.y+14);
     });
-    
-    // 敵機
-    enemiesRef.current.forEach(e => {
-       ctx.fillStyle = COLORS[`ENEMY_${e.type}`] || '#ef4444';
-       if (e.type === 'BOSS') {
-           ctx.fillRect(e.x, e.y + e.height*0.4, e.width, e.height*0.2);
-           ctx.fillRect(e.x + e.width*0.35, e.y, e.width*0.3, e.height);
-           // 血條
-           ctx.fillStyle = '#333'; ctx.fillRect(e.x, e.y - 15, e.width, 6);
-           ctx.fillStyle = '#ef4444'; ctx.fillRect(e.x, e.y - 15, e.width * (e.health/e.maxHealth), 6);
-       } else {
-           ctx.beginPath(); ctx.moveTo(e.x + e.width/2, e.y + e.height); ctx.lineTo(e.x, e.y); ctx.lineTo(e.x + e.width, e.y); ctx.fill();
-       }
-    });
-    
-    // 玩家
+    enemiesRef.current.forEach(e => drawEnemyPlane(ctx, e));
     drawPlayerPlane(ctx, playerRef.current);
-
-    // 粒子效果
     particlesRef.current = particlesRef.current.filter(p => {
       p.x += p.vx; p.y += p.vy; p.life -= 0.025;
-      ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 3 * p.life, 0, Math.PI*2); ctx.fill();
+      if (p.life > 0) {
+        ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0, 3 * p.life), 0, Math.PI*2); ctx.fill();
+      }
       return p.life > 0;
     });
     ctx.globalAlpha = 1.0;
@@ -475,7 +495,7 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
   return h('div', { className: 'w-full h-full relative overflow-hidden' },
     h('canvas', { 
         ref: canvasRef, width: CANVAS_WIDTH, height: CANVAS_HEIGHT, 
-        className: 'w-full h-full',
+        className: 'w-full h-full cursor-crosshair',
         onMouseMove: (e) => {
             if (isPaused) return;
             const rect = canvasRef.current.getBoundingClientRect();
@@ -484,24 +504,14 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
             playerRef.current.x += (tx - playerRef.current.x) * 0.15;
             playerRef.current.y += (ty - playerRef.current.y) * 0.15;
             setTilt((tx - playerRef.current.x) * 0.1);
-        },
-        onTouchMove: (e) => {
-            if (isPaused) return;
-            const rect = canvasRef.current.getBoundingClientRect();
-            const touch = e.touches[0];
-            const tx = ((touch.clientX - rect.left) / rect.width) * CANVAS_WIDTH - PLAYER_WIDTH/2;
-            const ty = ((touch.clientY - rect.top) / rect.height) * CANVAS_HEIGHT - PLAYER_HEIGHT/2;
-            playerRef.current.x += (tx - playerRef.current.x) * 0.2;
-            playerRef.current.y += (ty - playerRef.current.y) * 0.2;
-            setTilt((tx - playerRef.current.x) * 0.1);
         }
     }),
     h('div', { className: 'absolute top-4 left-4 pointer-events-none' },
       h('div', { className: 'text-white font-bold text-xs retro-font mb-2' }, `SCORE: ${playerRef.current.score.toLocaleString()}`),
-      h('div', { className: 'w-32 h-3 bg-red-900 border-2 border-white/40' },
+      h('div', { className: 'w-32 h-3 bg-red-900 border-2 border-white/40 shadow-lg' },
         h('div', { className: 'h-full bg-green-500 transition-all duration-100', style: { width: `${(playerRef.current.health/playerRef.current.maxHealth)*100}%` } })
       ),
-      h('div', { className: 'text-white/50 text-[10px] mt-1 font-bold' }, `WEAPON: LV${playerRef.current.weaponLevel}`)
+      h('div', { className: 'text-white/80 text-[10px] mt-2 font-bold retro-font' }, `WEAPON: LV${playerRef.current.weaponLevel}`)
     )
   );
 };
@@ -520,6 +530,16 @@ const App = () => {
     if (gameState === 'PLAYING' && !isPaused) stopBgm = audio.startBGM();
     return () => stopBgm?.();
   }, [gameState, isPaused]);
+
+  useEffect(() => {
+    const handleGlobalKeys = (e) => {
+      if (gameState === 'PLAYING' && (e.key === 'p' || e.key === 'P' || e.key === 'Escape')) {
+        setIsPaused(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeys);
+    return () => window.removeEventListener('keydown', handleGlobalKeys);
+  }, [gameState]);
 
   const startMission = async (level) => {
     setIsPaused(false);
@@ -550,14 +570,22 @@ const App = () => {
     setScore(0); setWeaponLevel(1); setCurrentLevel(1); setGameState('MENU');
   };
 
-  return h('div', { className: 'min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-4' },
+  return h('div', { className: 'min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-4 select-none' },
     h('div', { className: 'relative w-full max-w-[480px] aspect-[480/800] bg-black rounded-lg shadow-2xl overflow-hidden border-4 border-neutral-800' },
       
-      gameState === 'PLAYING' && h('div', { className: 'absolute top-4 right-4 z-30' },
+      gameState === 'PLAYING' && h('div', { className: 'absolute top-4 right-4 z-50' },
         h('button', { 
           onClick: () => setIsPaused(!isPaused),
           className: 'w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30 transition-all text-xl'
         }, isPaused ? '▶' : '||')
+      ),
+
+      gameState === 'PLAYING' && isPaused && h('div', { className: 'absolute inset-0 bg-black/70 z-40 flex flex-col items-center justify-center animate-fadeIn' },
+        h('h2', { className: 'retro-font text-5xl text-yellow-500 mb-12 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]' }, '暫停'),
+        h('button', { 
+            onClick: () => setIsPaused(false), 
+            className: 'px-12 py-4 bg-yellow-500 text-black font-bold retro-font text-sm hover:scale-110 transition-transform active:scale-95 shadow-[0_0_20px_rgba(234,179,8,0.4)]' 
+        }, '繼續遊戲')
       ),
 
       gameState === 'MENU' && h('div', { className: 'absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-20 p-8 text-center animate-fadeIn' },
@@ -567,7 +595,7 @@ const App = () => {
             onClick: () => startMission(1), 
             className: 'px-8 py-4 bg-red-600 hover:bg-red-700 transition-all retro-font text-lg rounded-sm transform hover:scale-110 active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.5)]' 
         }, '開始任務'),
-        h('p', { className: 'mt-12 text-neutral-500 text-[10px] retro-font leading-relaxed' }, '移動滑鼠或觸控以飛行\n自動射擊已開啟')
+        h('p', { className: 'mt-12 text-neutral-500 text-[10px] retro-font leading-relaxed' }, '移動滑鼠以飛行\n自動射擊已開啟\n按 P 暫停')
       ),
 
       gameState === 'MISSION_BRIEFING' && briefing && h('div', { className: 'absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-20 p-10 animate-fadeIn' },
@@ -613,7 +641,6 @@ const App = () => {
   );
 };
 
-// --- 6. 渲染入口 ---
 const rootElement = document.getElementById('root');
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
