@@ -347,6 +347,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
               if (e.type === 'BOSS') { 
                 createExplosion(e.x + e.width/2, e.y + e.height/2, true);
                 bossActiveRef.current = false; 
+                // CRITICAL: Ensure we pass current weapon level to preserve it
                 onLevelClear(player.score, player.weaponLevel); 
               } else {
                 createExplosion(e.x + e.width/2, e.y + e.height/2);
@@ -379,7 +380,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
       return p.y < CANVAS_HEIGHT;
     });
 
-    // Particles update
     particlesRef.current = particlesRef.current.filter(p => {
       p.x += p.vx; p.y += p.vy; p.life -= 0.02;
       return p.life > 0;
@@ -404,7 +404,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, initialScore, initialWea
     });
     ctx.globalAlpha = 1.0;
 
-    // Particles
     particlesRef.current.forEach(p => {
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;

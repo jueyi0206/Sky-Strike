@@ -13,10 +13,17 @@
         padding: 0;
         overflow: hidden;
         background-color: #000;
-        font-family: 'Space+Grotesk', sans-serif;
+        font-family: 'Space Grotesk', sans-serif;
       }
       .retro-font {
         font-family: 'Press Start 2P', cursive;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .animate-fadeIn {
+        animation: fadeIn 0.5s ease-out forwards;
       }
     </style>
   <script type="importmap">
@@ -32,5 +39,7 @@
 </head>
   <body>
     <div id="root"></div>
+    <!-- Explicitly import the entry point to ensure loading on static servers like GitHub Pages -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
