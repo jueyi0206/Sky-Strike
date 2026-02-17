@@ -184,6 +184,7 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
       enemiesRef.current.push({ x: Math.random() * (CANVAS_WIDTH - cfg.width), y: -cfg.height, width: cfg.width, height: cfg.height, speed: cfg.speed + level * 0.1, health: cfg.health, maxHealth: cfg.health, type, fireCooldown: Math.random() * cfg.fireRate });
     }
 
+    // Level progression check using thresholds
     if (!bossActiveRef.current && (player.score - initialScore) >= LEVEL_THRESHOLDS[level-1]) {
       bossActiveRef.current = true;
       const bCfg = ENEMY_TYPES.BOSS;
@@ -232,15 +233,27 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
 
   const draw = useCallback((ctx) => {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
+    // Dynamic background based on level
     const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
-    skyGrad.addColorStop(0, '#020617'); skyGrad.addColorStop(1, '#0f172a');
+    if (level === 1) {
+        skyGrad.addColorStop(0, '#0f172a'); skyGrad.addColorStop(1, '#1e3a8a'); // Ocean
+    } else if (level === 2) {
+        skyGrad.addColorStop(0, '#022c22'); skyGrad.addColorStop(1, '#14532d'); // Mountain Forest
+    } else {
+        skyGrad.addColorStop(0, '#312e81'); skyGrad.addColorStop(1, '#be185d'); // Sunset City
+    }
+    
     ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     starsRef.current.forEach(s => { s.y += s.speed; if (s.y > CANVAS_HEIGHT) s.y = -10; ctx.fillRect(s.x, s.y, s.size, s.size); });
     cloudsRef.current.forEach(c => { c.y += c.speed; if (c.y > CANVAS_HEIGHT + c.size) c.y = -c.size; ctx.globalAlpha = c.opacity; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(0, c.size), 0, Math.PI*2); ctx.fill(); });
     ctx.globalAlpha = 1.0;
+    
     bulletsRef.current.forEach(b => { ctx.fillStyle = b.color || COLORS.PLAYER_BULLET; ctx.fillRect(b.x, b.y, b.width, b.height); });
     powerUpsRef.current.forEach(p => { ctx.fillStyle = p.type === 'WEAPON' ? '#fbbf24' : '#10b981'; ctx.beginPath(); ctx.arc(p.x + 11, p.y + 11, Math.max(0, 11), 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(p.type[0], p.x+11, p.y+15); });
+    
     enemiesRef.current.forEach(e => drawEnemyPlane(ctx, e));
     drawPlayerPlane(ctx, playerRef.current);
     
@@ -254,7 +267,7 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
         ctx.fill(); 
     });
     ctx.globalAlpha = 1.0;
-  }, [drawEnemyPlane, drawPlayerPlane]);
+  }, [level, drawEnemyPlane, drawPlayerPlane]);
 
   const loop = useCallback(() => { const ctx = canvasRef.current?.getContext('2d'); if (ctx) { update(); draw(ctx); } requestRef.current = requestAnimationFrame(loop); }, [update, draw]);
 

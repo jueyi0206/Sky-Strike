@@ -16,7 +16,11 @@ export async function getMissionBriefing(level) {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Generate a dramatic mission briefing for Level ${level} of a 1945 style shooter. Use Traditional Chinese.`,
+      contents: `Generate a dramatic mission briefing for Level ${level} of a 1945 style shooter. 
+      Level 1: Pacific Ocean (Naval battle).
+      Level 2: Secret Mountain Base (Aerial infiltration).
+      Level 3: Capital City (Final showdown).
+      Limit 100 characters. Use Traditional Chinese.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
