@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { 
   CANVAS_WIDTH, 
@@ -222,6 +223,10 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     enemiesRef.current = enemiesRef.current.filter(e => e.health > 0);
 
     powerUpsRef.current = powerUpsRef.current.filter(p => { p.y += 1.5; if (Math.abs(p.x - player.x) < 40 && Math.abs(p.y - player.y) < 40) { audio.playPowerup(); if (p.type === 'WEAPON') player.weaponLevel = Math.min(5, player.weaponLevel + 1); else player.health = Math.min(player.maxHealth, player.health + 50); return false; } return p.y < CANVAS_HEIGHT; });
+    
+    // Particle update moved here
+    particlesRef.current = particlesRef.current.filter(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.025; return p.life > 0; });
+    
     if (player.health <= 0) onGameOver(player.score);
   }, [level, isPaused, initialScore, onGameOver, onLevelClear]);
 
@@ -238,7 +243,16 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     powerUpsRef.current.forEach(p => { ctx.fillStyle = p.type === 'WEAPON' ? '#fbbf24' : '#10b981'; ctx.beginPath(); ctx.arc(p.x + 11, p.y + 11, Math.max(0, 11), 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(p.type[0], p.x+11, p.y+15); });
     enemiesRef.current.forEach(e => drawEnemyPlane(ctx, e));
     drawPlayerPlane(ctx, playerRef.current);
-    particlesRef.current = particlesRef.current.filter(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.025; if (p.life > 0) { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0, 3.5 * p.life), 0, Math.PI*2); ctx.fill(); } return p.life > 0; });
+    
+    // Particle draw logic
+    particlesRef.current.forEach(p => { 
+        if(p.life <= 0) return;
+        ctx.globalAlpha = p.life; 
+        ctx.fillStyle = p.color; 
+        ctx.beginPath(); 
+        ctx.arc(p.x, p.y, Math.max(0, 3.5 * p.life), 0, Math.PI*2); 
+        ctx.fill(); 
+    });
     ctx.globalAlpha = 1.0;
   }, [drawEnemyPlane, drawPlayerPlane]);
 

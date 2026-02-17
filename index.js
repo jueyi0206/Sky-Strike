@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -414,6 +415,15 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
       }
       return p.y < CANVAS_HEIGHT;
     });
+    
+    // Update particles
+    particlesRef.current = particlesRef.current.filter(p => {
+      p.x += p.vx; 
+      p.y += p.vy; 
+      p.life -= 0.025;
+      return p.life > 0;
+    });
+
     if (player.health <= 0) onGameOver(player.score);
   }, [level, isPaused, initialScore, onGameOver, onLevelClear]);
 
@@ -440,14 +450,16 @@ const GameCanvas = ({ level, isPaused, initialScore, initialWeaponLevel, onGameO
     });
     enemiesRef.current.forEach(e => drawEnemyPlane(ctx, e));
     drawPlayerPlane(ctx, playerRef.current);
-    particlesRef.current = particlesRef.current.filter(p => {
-      p.x += p.vx; p.y += p.vy; p.life -= 0.025;
-      if (p.life > 0) {
-        ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); 
-        // 關鍵修復：確保半徑不為負
-        ctx.arc(p.x, p.y, Math.max(0, 3.5 * p.life), 0, Math.PI*2); ctx.fill();
-      }
-      return p.life > 0;
+    
+    // Draw particles
+    particlesRef.current.forEach(p => {
+      if (p.life <= 0) return;
+      ctx.globalAlpha = p.life; 
+      ctx.fillStyle = p.color; 
+      ctx.beginPath(); 
+      // Ensure radius is never negative
+      ctx.arc(p.x, p.y, Math.max(0, 3.5 * p.life), 0, Math.PI*2); 
+      ctx.fill();
     });
     ctx.globalAlpha = 1.0;
   }, []);

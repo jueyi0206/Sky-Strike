@@ -330,7 +330,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, isPaused, initialScore, 
       return p.y < CANVAS_HEIGHT;
     });
 
+    // Particle update logic separated from draw
     particlesRef.current = particlesRef.current.filter(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.02; return p.life > 0; });
+    
     if (player.health <= 0) { onGameOver(player.score); if (requestRef.current !== null) cancelAnimationFrame(requestRef.current); }
   }, [level, isPaused, initialScore, onGameOver, onLevelClear, spawnBoss, tilt]);
 
@@ -343,15 +345,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, isPaused, initialScore, 
     ctx.fillStyle = '#fff';
     starsRef.current.forEach(s => { ctx.globalAlpha = 0.3; ctx.fillRect(s.x, s.y, s.size, s.size); });
     cloudsRef.current.forEach(c => { ctx.globalAlpha = c.opacity; ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(0, c.size), 0, Math.PI*2); ctx.fill(); });
-    ctx.globalAlpha = 1.0;
-
-    particlesRef.current.forEach(p => { 
-        ctx.globalAlpha = p.life; 
-        ctx.fillStyle = p.color; 
-        ctx.beginPath(); 
-        ctx.arc(p.x, p.y, Math.max(0, 4 * p.life), 0, Math.PI * 2); 
-        ctx.fill(); 
-    });
     ctx.globalAlpha = 1.0;
 
     bulletsRef.current.forEach(b => {
@@ -368,6 +361,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ level, isPaused, initialScore, 
 
     enemiesRef.current.forEach(e => drawEnemyPlane(ctx, e));
     drawPlayerPlane(ctx, playerRef.current);
+
+    // Particle draw logic separated
+    particlesRef.current.forEach(p => { 
+        if(p.life <= 0) return;
+        ctx.globalAlpha = p.life; 
+        ctx.fillStyle = p.color; 
+        ctx.beginPath(); 
+        // Ensure radius is never negative
+        ctx.arc(p.x, p.y, Math.max(0, 3.5 * p.life), 0, Math.PI * 2); 
+        ctx.fill(); 
+    });
+    ctx.globalAlpha = 1.0;
 
     // HUD
     ctx.fillStyle = '#fff'; ctx.font = '700 16px "Space Grotesk"'; ctx.textAlign = 'left';
